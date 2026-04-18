@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 3000;
 // 2. Middlewares
 app.use(cors({
     // URL que te da Render para el Frontend
-    origin: 'https://agenda-backend.onrender.com',
+    origin: 'https://agenda-frontend.onrender.com',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
