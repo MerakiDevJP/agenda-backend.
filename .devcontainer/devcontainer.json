@@ -1,0 +1,36 @@
+{
+    "name": "Agenda Backend - Node.js",
+    "dockerComposeFile": [
+        "../../../../docker-compose.yml"
+    ],
+    "service": "node",
+    "workspaceFolder": "/workspace/angular/agenda-backend",
+    "runServices": [
+        "mysql"
+    ],
+    "overrideCommand": true,
+    "features": {
+        "ghcr.io/devcontainers/features/common-utils:2": {
+            "installZsh": true,
+            "configureZshAsDefaultShell": true
+        }
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "dbaeumer.vscode-eslint",
+                "esbenp.prettier-vscode",
+                "ms-vscode.vscode-typescript-next",
+                "christian-kohler.npm-intellisense",
+                "mtxr.sqltools",
+                "mtxr.sqltools-driver-mysql"
+            ],
+            "settings": {
+                "terminal.integrated.shell.linux": "/bin/zsh",
+                "editor.formatOnSave": true,
+                "editor.defaultFormatter": "esbenp.prettier-vscode"
+            }
+        }
+    },
+    "remoteUser": "node"
+}

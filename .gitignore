@@ -1,0 +1,11 @@
+# --- DEPENDENCIAS ---
+node_modules/
+
+# --- SEGURIDAD Y CONFIGURACIÓN ---
+.env
+
+# --- ARCHIVOS DE SALIDA (BUILD) ---
+dist/
+
+# --- REGISTROS Y ERRORES ---
+*.log
