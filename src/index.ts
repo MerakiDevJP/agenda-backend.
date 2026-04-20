@@ -18,7 +18,7 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Tip adicional: Agrega una ruta raíz para verificar que el servidor vive
+// Se agrega una ruta raíz para verificar que el servidor vive
 app.get('/', (req, res) => {
     res.send('Servidor de Óptica Joesva (Backend) funcionando en Render');
 });
@@ -121,13 +121,13 @@ app.post('/api/citas', async (req, res) => {
     const { pacienteId, fecha, hora, estado, optometra } = req.body;
 
     try {
-        // 1. Verificar si el paciente ya tiene cita ese día
-        const [existente]: any = await pool.query(
-            'SELECT * FROM citas WHERE pacienteId = ? AND fecha = ?',
-            [pacienteId, fecha]
+        // 1. Verificar si el paciente tiene cita duplicada
+        const [duplicado]: any = await pool.query(
+            'SELECT * FROM citas WHERE fecha = ? AND hora = ? AND optometra = ?',
+            [fecha, hora, optometra]
         );
 
-        if (existente.length > 0) {
+        if (duplicado.length > 0) {
             return res.status(400).json({
                 error: 'Cita duplicada',
                 message: 'Este paciente ya tiene una cita agendada para la fecha seleccionada.'
