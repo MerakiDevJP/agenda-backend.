@@ -123,33 +123,41 @@ app.get('/api/citas', async (req, res) => {
     }
 });
 
-// Crear una cita (Persistencia real)
+// Crear una cita
 app.post('/api/citas', async (req, res) => {
     const { pacienteId, fecha, hora, estado, optometra } = req.body;
 
     try {
-        // 1. Verificar si el paciente tiene cita duplicada
+        // 1. Se limpia la fecha para asegurar formato YYYY-MM-DD
+        const fechaLimpia = typeof fecha === 'string' ? fecha.split('T')[0] : fecha;
+
+        // 2. Se valida, solo se bloquea si existe EXACTAMENTE la misma cita
+        // (Mismo optometra, misma fecha y misma hora)
         const [duplicado]: any = await pool.query(
             'SELECT * FROM citas WHERE fecha = ? AND hora = ? AND optometra = ?',
-            [fecha, hora, optometra]
+            [fechaLimpia, hora, optometra]
         );
 
-        if (duplicado.length > 0) {
+        if (duplicado && duplicado.length > 0) {
             return res.status(400).json({
                 error: 'Cita duplicada',
-                message: 'Este paciente ya tiene una cita agendada para la fecha seleccionada.'
+                message: 'Este horario ya está reservado con este profesional.'
             });
         }
 
-        // 2. Insertar si está disponible
+        // 3. Insertar la cita
+        const idCita = Date.now();
+
         await pool.query(
-            'INSERT INTO citas (pacienteId, fecha, hora, estado, optometra) VALUES (?, ?, ?, ?, ?)',
-            [pacienteId, fecha, hora, estado, optometra]
+            'INSERT INTO citas (id, pacienteId, fecha, hora, estado, optometra) VALUES (?, ?, ?, ?, ?, ?)',
+            [idCita, pacienteId, fechaLimpia, hora, estado, optometra]
         );
+
         res.status(201).json({ message: 'Cita agendada correctamente' });
+
     } catch (error) {
-        console.error('Error en POST Citas:', error);
-        res.status(500).json({ error: 'Error al agendar la cita' });
+        console.error('Error detallado en TiDB:', error);
+        res.status(500).json({ error: 'Error al agendar', message: 'Verifica la conexión con la base de datos.' });
     }
 });
 
