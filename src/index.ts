@@ -68,12 +68,19 @@ app.post('/api/pacientes', async (req, res) => {
 app.put('/api/pacientes/:id', async (req, res) => {
     const { id } = req.params;
     const { nombre, cedula, telefono, direccion, mail, motivoConsulta } = req.body;
-    //const idNum = parseInt(id, 10);
+    const idNum = parseInt(id, 10);
+
+    if (cedula && !esCedulaValida(cedula)) {
+        return res.status(400).json({ error: 'Cédula inválida' });
+    }
+    if (nombre && !soloLetras(nombre)) {
+        return res.status(400).json({ error: 'Nombre inválido' });
+    }
 
     try {
         const [result]: any = await pool.query(
             'UPDATE pacientes SET nombre=?, cedula=?, telefono=?, direccion=?, mail=?, motivoConsulta=? WHERE id=?',
-            [nombre, cedula, telefono, direccion, mail, motivoConsulta, id]
+            [nombre, cedula, telefono, direccion, mail, motivoConsulta, idNum]
         );
 
         if (result.affectedRows === 0) {
