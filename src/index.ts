@@ -11,8 +11,8 @@ const PORT = process.env.PORT || 3000;
 
 // 2. Middlewares
 app.use(cors({
-    // URL que te da Render para el Frontend
-    origin: 'https://agenda-frontend-c7hn.onrender.com',
+    // URL que da Render para el Frontend
+    origin: ['https://agenda-frontend-c7hn.onrender.com', 'https://agenda-frontend-c7hn.onrender.com/'],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -68,14 +68,20 @@ app.post('/api/pacientes', async (req, res) => {
 app.put('/api/pacientes/:id', async (req, res) => {
     const { id } = req.params;
     const { nombre, cedula, telefono, direccion, mail, motivoConsulta } = req.body;
+    const idNum = parseInt(id, 10);
 
     try {
-        await pool.query(
+        const [result]: any = await pool.query(
             'UPDATE pacientes SET nombre=?, cedula=?, telefono=?, direccion=?, mail=?, motivoConsulta=? WHERE id=?',
-            [nombre, cedula, telefono, direccion, mail, motivoConsulta, id]
+            [nombre, cedula, telefono, direccion, mail, motivoConsulta, idNum]
         );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Paciente no encontrado' });
+        }
         res.json({ message: 'Paciente actualizado correctamente' });
     } catch (error) {
+        console.error('Error en UPDATE:', error);
         res.status(500).json({ error: 'Error al actualizar paciente' });
     }
 });
@@ -84,7 +90,7 @@ app.put('/api/pacientes/:id', async (req, res) => {
 app.delete('/api/pacientes/:id', async (req, res) => {
     const { id } = req.params;
     try {
-        await pool.query('DELETE FROM pacientes WHERE id = ?', [id]);
+        await pool.query('DELETE FROM pacientes WHERE id = ?', [parseInt(id, 10)]);
         res.json({ message: 'Paciente eliminado' });
     } catch (error) {
         res.status(500).json({ error: 'No se puede eliminar: el paciente tiene citas activas' });
@@ -93,7 +99,7 @@ app.delete('/api/pacientes/:id', async (req, res) => {
 
 // --- RUTAS DE CITAS ---
 
-// Obtener citas (con filtro opcional por fecha y optómetra)
+// Obtener citas (con filtro por fecha y optómetra)
 app.get('/api/citas', async (req, res) => {
     const { fecha, optometra } = req.query;
     try {
@@ -112,14 +118,30 @@ app.get('/api/citas', async (req, res) => {
 
 // Crear una cita (Persistencia real)
 app.post('/api/citas', async (req, res) => {
-    const { id, pacienteId, fecha, hora, estado, optometra } = req.body;
+    const { pacienteId, fecha, hora, estado, optometra } = req.body;
+
     try {
+        // 1. Verificar si el paciente ya tiene cita ese día
+        const [existente]: any = await pool.query(
+            'SELECT * FROM citas WHERE pacienteId = ? AND fecha = ?',
+            [pacienteId, fecha]
+        );
+
+        if (existente.length > 0) {
+            return res.status(400).json({
+                error: 'Cita duplicada',
+                message: 'Este paciente ya tiene una cita agendada para la fecha seleccionada.'
+            });
+        }
+
+        // 2. Insertar si está disponible
         await pool.query(
-            'INSERT INTO citas (id, pacienteId, fecha, hora, estado, optometra) VALUES (?, ?, ?, ?, ?, ?)',
-            [id, pacienteId, fecha, hora, estado, optometra]
+            'INSERT INTO citas (pacienteId, fecha, hora, estado, optometra) VALUES (?, ?, ?, ?, ?)',
+            [pacienteId, fecha, hora, estado, optometra]
         );
         res.status(201).json({ message: 'Cita agendada correctamente' });
     } catch (error) {
+        console.error('Error en POST Citas:', error);
         res.status(500).json({ error: 'Error al agendar la cita' });
     }
 });
@@ -128,10 +150,12 @@ app.post('/api/citas', async (req, res) => {
 app.put('/api/citas/:id', async (req, res) => {
     const { id } = req.params;
     const { pacienteId, fecha, hora, estado, optometra } = req.body;
+    const idNum = parseInt(id, 10);
+
     try {
         await pool.query(
             'UPDATE citas SET pacienteId=?, fecha=?, hora=?, estado=?, optometra=? WHERE id=?',
-            [pacienteId, fecha, hora, estado, optometra, id]
+            [pacienteId, fecha, hora, estado, optometra, idNum]
         );
         res.json({ message: 'Cita modificada con éxito' });
     } catch (error) {
@@ -143,7 +167,7 @@ app.put('/api/citas/:id', async (req, res) => {
 app.delete('/api/citas/:id', async (req, res) => {
     const { id } = req.params;
     try {
-        await pool.query('DELETE FROM citas WHERE id = ?', [id]);
+        await pool.query('DELETE FROM citas WHERE id = ?', [parseInt(id, 10)]);
         res.json({ message: 'Cita cancelada y eliminada' });
     } catch (error) {
         res.status(500).json({ error: 'Error al eliminar la cita' });
@@ -157,7 +181,7 @@ app.get('/api/ping', (req, res) => {
 
 // Iniciar Servidor
 app.listen(PORT, () => {
-    console.log(` Servidor corriendo en http://localhost:${PORT}`);
+    console.log(` Servidor corriendo en el puerto${PORT}`);
 });
 
 // --- FUNCIONES DE VALIDACIÓN ---
