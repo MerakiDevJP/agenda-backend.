@@ -125,39 +125,45 @@ app.get('/api/citas', async (req, res) => {
 
 // Crear una cita
 app.post('/api/citas', async (req, res) => {
-    const { pacienteId, fecha, hora, estado, optometra } = req.body;
+    const { id, pacienteId, fecha, hora, estado, optometra } = req.body;
+
+    // Se limpia por si el frontend envía basura
+    const fechaSQL = typeof fecha === 'string' ? fecha.split('T')[0] : fecha;
 
     try {
-        // 1. Se limpia la fecha para asegurar formato YYYY-MM-DD
-        const fechaLimpia = typeof fecha === 'string' ? fecha.split('T')[0] : fecha;
-
-        // 2. Se valida, solo se bloquea si existe EXACTAMENTE la misma cita
-        // (Mismo optometra, misma fecha y misma hora)
-        const [duplicado]: any = await pool.query(
-            'SELECT * FROM citas WHERE fecha = ? AND hora = ? AND optometra = ?',
-            [fechaLimpia, hora, optometra]
+        // Se valida si el paciente ya tiene una cita ESTE DÍA
+        const [pacienteOcupado]: any = await pool.query(
+            'SELECT * FROM citas WHERE pacienteId = ? AND fecha = ?',
+            [pacienteId, fechaSQL]
         );
 
-        if (duplicado && duplicado.length > 0) {
+        if (pacienteOcupado.length > 0) {
             return res.status(400).json({
-                error: 'Cita duplicada',
-                message: 'Este horario ya está reservado con este profesional.'
+                message: 'El paciente ya tiene una cita registrada para esta fecha.'
             });
         }
 
-        // 3. Insertar la cita
-        const idCita = Date.now();
-
-        await pool.query(
-            'INSERT INTO citas (id, pacienteId, fecha, hora, estado, optometra) VALUES (?, ?, ?, ?, ?, ?)',
-            [idCita, pacienteId, fechaLimpia, hora, estado, optometra]
+        // Se valida si el horario y el médico están libres
+        const [horarioOcupado]: any = await pool.query(
+            'SELECT * FROM citas WHERE fecha = ? AND hora = ? AND optometra = ?',
+            [fechaSQL, hora, optometra]
         );
 
-        res.status(201).json({ message: 'Cita agendada correctamente' });
+        if (horarioOcupado.length > 0) {
+            return res.status(400).json({
+                message: 'Este horario ya no está disponible con el profesional seleccionado.'
+            });
+        }
 
+        // Se registra la cita
+        await pool.query(
+            'INSERT INTO citas (id, pacienteId, fecha, hora, estado, optometra) VALUES (?, ?, ?, ?, ?, ?)',
+            [id, pacienteId, fechaSQL, hora, estado, optometra]
+        );
+
+        res.status(201).json({ message: 'Cita agendada con éxito' });
     } catch (error) {
-        console.error('Error detallado en TiDB:', error);
-        res.status(500).json({ error: 'Error al agendar', message: 'Verifica la conexión con la base de datos.' });
+        res.status(500).json({ error: 'Error en el servidor' });
     }
 });
 
