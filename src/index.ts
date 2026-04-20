@@ -68,12 +68,12 @@ app.post('/api/pacientes', async (req, res) => {
 app.put('/api/pacientes/:id', async (req, res) => {
     const { id } = req.params;
     const { nombre, cedula, telefono, direccion, mail, motivoConsulta } = req.body;
-    const idNum = parseInt(id, 10);
+    //const idNum = parseInt(id, 10);
 
     try {
         const [result]: any = await pool.query(
             'UPDATE pacientes SET nombre=?, cedula=?, telefono=?, direccion=?, mail=?, motivoConsulta=? WHERE id=?',
-            [nombre, cedula, telefono, direccion, mail, motivoConsulta, idNum]
+            [nombre, cedula, telefono, direccion, mail, motivoConsulta, id]
         );
 
         if (result.affectedRows === 0) {
@@ -81,7 +81,7 @@ app.put('/api/pacientes/:id', async (req, res) => {
         }
         res.json({ message: 'Paciente actualizado correctamente' });
     } catch (error) {
-        console.error('Error en UPDATE:', error);
+        console.error('Error en Actualización:', error);
         res.status(500).json({ error: 'Error al actualizar paciente' });
     }
 });
